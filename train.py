@@ -80,7 +80,7 @@ def train_one_epoch(net, model_name, optimizer, curEpoch, endEpoch, train_loader
             print(
                 f'current_epoch:{curEpoch + 1}/Epochs{endEpoch}=========>loss:{loss.item():.3f},f_score:{_f_score:.3f},dice_coe:{dice_coe:.3f}')
 
-            torch.save(net.state_dict(), f'logs/{model_name}/{endEpoch}/{model_name}_{curEpoch}_{endEpoch}.pth')
+            torch.save(net.state_dict(), f'logs/{model_name}/{model_name}_{curEpoch}_{endEpoch}.pth')
             # 更新参数
             loss.backward()
             optimizer.step()
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # 指定训练集地址，开始训练
-
+    batch_size = arg.batch_size
     data_path = arg.data_path
     start_epoch = arg.start_epoch
     loss = arg.loss_function
@@ -187,4 +187,4 @@ if __name__ == "__main__":
         weight_path = ''
     loss_history = LossHistory(log_model_dir)
     train_net(net, device, start_epoch, model_name, weight_path, data_path, criterion, loss_history, epochs=end_epochs,
-              batch_size=2)
+              batch_size=batch_size)
