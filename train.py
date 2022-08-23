@@ -45,13 +45,13 @@ def train_net(net, device, start_epoch, model_name, weight_path, data_path, crit
         net.load_state_dict(model_dict)
 
     for epoch in range(start_epoch, epochs):
-        train_loss = train_one_epoch(net,model_name, optimizer, epoch, epochs, train_loader, train_iteration)
-        val_loss = val_one_epoch(net,model_name, optimizer, epoch, epochs, val_loader, val_iteration)
+        train_loss = train_one_epoch(net, model_name, optimizer, epoch, epochs, train_loader, train_iteration)
+        val_loss = val_one_epoch(net, model_name, optimizer, epoch, epochs, val_loader, val_iteration)
         print(f'Total Loss: {train_loss:.3f} || Val Loss: {val_loss:.3f} ')
         loss_history.append_loss(train_loss, val_loss)
 
 
-def train_one_epoch(net, model_name,optimizer, curEpoch, endEpoch, train_loader, iteration):
+def train_one_epoch(net, model_name, optimizer, curEpoch, endEpoch, train_loader, iteration):
     print('start train:')
     with tqdm(total=iteration, desc=f'Epoch {curEpoch + 1}/{endEpoch}', postfix=dict, mininterval=0.3) as pbar:
         total_loss = 0
@@ -80,7 +80,7 @@ def train_one_epoch(net, model_name,optimizer, curEpoch, endEpoch, train_loader,
             print(
                 f'current_epoch:{curEpoch + 1}/Epochs{endEpoch}=========>loss:{loss.item():.3f},f_score:{_f_score:.3f},dice_coe:{dice_coe:.3f}')
 
-            torch.save(net.state_dict(), f'logs/{model_name}/{model_name}_{curEpoch}.pth')
+            torch.save(net.state_dict(), f'logs/{model_name}/{endEpoch}/{model_name}_{curEpoch}_{endEpoch}.pth')
             # 更新参数
             loss.backward()
             optimizer.step()
@@ -90,7 +90,7 @@ def train_one_epoch(net, model_name,optimizer, curEpoch, endEpoch, train_loader,
     return total_loss.item() / (iteration)
 
 
-def val_one_epoch(net,model_name, optimizer, curEpoch, endEpoch, train_loader, iteration):
+def val_one_epoch(net, model_name, optimizer, curEpoch, endEpoch, train_loader, iteration):
     print('start val:')
     with tqdm(total=iteration, desc=f'Epoch {curEpoch + 1}/{endEpoch}', postfix=dict, mininterval=0.3) as pbar:
         total_loss = 0
@@ -145,7 +145,7 @@ def getArgs():
     parse.add_argument('--data_path', default='COVID', help='the data root')
     parse.add_argument("--log_dir", default='logs', help="log dir")
     parse.add_argument("--threshold", type=float, default=None)
-    parse.add_argument('--start_epoch', type=int, default=1, help='train start epoch')
+    parse.add_argument('--start_epoch', type=int, default=0, help='train start epoch')
     parse.add_argument('--end_epoch', type=int, default=50, help='the train epochs = startEpoch - endEpoch')
     parse.add_argument('--lr', type=float, default=0.00001, help='the learning rate')
     parse.add_argument('--loss_function', type=str, default='Dice', help='choose the loss function')
@@ -167,7 +167,7 @@ if __name__ == "__main__":
     log_model_dir = os.path.join(log_dir, model_name)
     weight_path = arg.weight_path
     load_weight = arg.load_pretrain_model
-
+    end_epochs = arg.end_epoch
     if not os.path.exists(log_model_dir):
         os.makedirs(log_model_dir)
     if loss == 'BCE':
@@ -186,5 +186,5 @@ if __name__ == "__main__":
     if not load_weight:
         weight_path = ''
     loss_history = LossHistory(log_model_dir)
-    train_net(net, device, start_epoch, model_name, weight_path, data_path, criterion, loss_history, epochs=70,
+    train_net(net, device, start_epoch, model_name, weight_path, data_path, criterion, loss_history, epochs=end_epochs,
               batch_size=2)
