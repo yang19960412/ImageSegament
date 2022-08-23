@@ -165,7 +165,7 @@ def get_gt_contrast(pre_dir,GT_dir,label_dir):
 if __name__ == '__main__':
     net = UNet(n_channels=1, n_classes=1)
     arg = getArgs()
-    pred_dir = os.path.join(arg.model,'0-1mask')
-    model_path = os.path.join(arg.log,arg.model,())
-    cal_miou(net = net,model_path='logs/Unet_50/Unet_model_49.pth',pred_dir='result_unet_50/0-1mask',miou_out_path='result_unet_50/miou')
+    pred_dir = os.path.join(f'result_{arg.model}_{arg.end_epoch}','0-1mask')
+    miou_path = os.path.join(f'result_{arg.model}_{arg.end_epoch}','miou')
+    cal_miou(net = net,model_path='logs/Unet_50/Unet_model_49.pth',pred_dir=pred_dir,miou_out_path=miou_path)
 
