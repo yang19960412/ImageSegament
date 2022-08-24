@@ -37,8 +37,9 @@ class UNet(nn.Module):
         x = self.up2(x, x3)
         x = self.up3(x, x2)
         x = self.up4(x, x1)
-        logits = self.outc(x)
-        return logits
+        out = self.outc(x)
+        out = nn.Sigmoid()(out)
+        return out
 
 
 class Unet_att_ECA(nn.Module):
@@ -286,5 +287,7 @@ class Unet_CBAM(nn.Module):
 
 
 if __name__ == '__main__':
-    net = Unet_CBAM(n_channels=3, n_classes=1)
-    print(net)
+    x = torch.rand(2,1,256,256)
+    net = UNet(n_channels=1, n_classes=1)
+
+    print(net(x).size())

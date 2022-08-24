@@ -135,7 +135,7 @@ def getArgs():
     parse = argparse.ArgumentParser()
     parse.add_argument('--deepsupervision', default=0)
     parse.add_argument("--action", type=str, help="train/test/train&test", default="train&test")
-    parse.add_argument('--model', '-a', metavar='MODEL', default='UnetCooAtt', type=str,
+    parse.add_argument('--model', '-a', metavar='MODEL', default='Unet', type=str,
                        help='Choose the model')
     parse.add_argument('--weight_path', type=str, default='logs/Unet_CBAM_37.pth', help='load pre_train weight_path')
     parse.add_argument('--load_pretrain_model', type=bool, default=False, help='decide the model whether load weight')
@@ -185,6 +185,8 @@ if __name__ == "__main__":
         net = UnetCBAM(n_channels=1, n_classes=1)
     if model_name == 'UnetCooAtt':
         net = UnetCooAtt(in_channle=1, n_classes=1)
+    if model_name == 'Unet':
+        net = UNet(n_channels=1,n_classes=1)
     # 将网络拷贝到deivce中
     net.to(device=device)
     if not load_weight:

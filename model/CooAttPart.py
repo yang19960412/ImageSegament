@@ -2,7 +2,8 @@ import math
 
 from torch import nn
 import torch
-from model.unet_model import DownSample,DoubleConv,UpSample,ConvBlock
+from model.unet_model import DownSample, DoubleConv, UpSample, ConvBlock
+
 
 class h_sigmoid(nn.Module):
     def __init__(self, inplace=True):
@@ -30,15 +31,15 @@ class CoordAtt(nn.Module):
 
         mip = max(8, inp // reduction)
 
-        self.conv1 = nn.Conv2d(inp, mip, kernel_size=1, stride=1, padding=0)
+        self.aft_pool_conv1 = nn.Conv2d(inp, mip, kernel_size=1, stride=1, padding=0)
         self.bn1 = nn.BatchNorm2d(mip)
 
         self.act = h_swish()
 
-        self.conv_h = nn.Conv2d(mip, oup, kernel_size=1, stride=1, padding=0)
-        self.conv_w = nn.Conv2d(mip, oup, kernel_size=1, stride=1, padding=0)
+        self.aft_split_conv_h = nn.Conv2d(mip, oup, kernel_size=1, stride=1, padding=0)
+        self.aft_split_conv_w = nn.Conv2d(mip, oup, kernel_size=1, stride=1, padding=0)
 
-    def forward(self, x):
+    def forward(self, x : torch.Tensor):
         identity = x
 
         n, c, h, w = x.size()
@@ -46,19 +47,20 @@ class CoordAtt(nn.Module):
         x_w = self.pool_w(x).permute(0, 1, 3, 2)
 
         y = torch.cat([x_h, x_w], dim=2)
-        y = self.conv1(y)  # 削减通道数为mip
+        y = self.aft_pool_conv1(y)  # 削减通道数为mip
         y = self.bn1(y)
         y = self.act(y)
 
         x_h, x_w = torch.split(y, [h, w], dim=2)
         x_w = x_w.permute(0, 1, 3, 2)
 
-        a_h = self.conv_h(x_h).sigmoid()
-        a_w = self.conv_w(x_w).sigmoid()
+        a_h = self.aft_split_conv_h(x_h).sigmoid()
+        a_w = self.aft_split_conv_w(x_w).sigmoid()
 
         out = identity * a_w * a_h
 
         return out
+
 
 ##=========================================================
 # 本次改动：原有r 改为 16，增加Max分支
@@ -88,10 +90,10 @@ class CoorAtten_v(nn.Module):
         x_h = self.pool_h(x)
         x_w = self.pool_w(x).permute(0, 1, 3, 2)
         x_h_max = self.pool_h_max(x)
-        x_w_max = self.pool_w_max(x).permute(0,1,3,2)
-        y_max = torch.cat([x_h_max,x_w_max],dim=2)
+        x_w_max = self.pool_w_max(x).permute(0, 1, 3, 2)
+        y_max = torch.cat([x_h_max, x_w_max], dim=2)
 
-        y = torch.cat([x_h, x_w], dim=2)    #y = c*1*(h+w)
+        y = torch.cat([x_h, x_w], dim=2)  # y = c*1*(h+w)
         y = self.aft_pool_conv1(y)  # 削减通道数为mip=c/r ,r = 32
         y = self.bn1(y)
         y = self.act(y)
@@ -99,30 +101,31 @@ class CoorAtten_v(nn.Module):
         x_h, x_w = torch.split(y, [h, w], dim=2)
         x_w = x_w.permute(0, 1, 3, 2)
 
-        a_h = self.aft_split_conv_h(x_h).sigmoid()  #升维
+        a_h = self.aft_split_conv_h(x_h).sigmoid()  # 升维
         a_w = self.aft_split_conv_w(x_w).sigmoid()
 
         out = identity * a_w * a_h
 
         return out
 
+
 class UnetCooAtt(nn.Module):
-    def __init__(self,in_channle,n_classes):
+    def __init__(self, in_channle, n_classes):
         super(UnetCooAtt, self).__init__()
         self.n_channels = in_channle
         self.n_classes = n_classes
         # self.att = Res_Att_Conv_Block()
         self.c1 = ConvBlock(in_channle, 64)
-        self.c1_att = CoordAtt(64,64)
+        self.c1_att = CoordAtt(64, 64)
         self.d1 = DownSample()
         self.c2 = ConvBlock(64, 128)
-        self.c2_att = CoordAtt(128,128)  # 每次下采样的初始通道数
+        self.c2_att = CoordAtt(128, 128)  # 每次下采样的初始通道数
         self.d2 = DownSample()
         self.c3 = ConvBlock(128, 256)
-        self.c3_att = CoordAtt(256,256)
+        self.c3_att = CoordAtt(256, 256)
         self.d3 = DownSample()
         self.c4 = ConvBlock(256, 512)
-        self.c4_att = CoordAtt(512,512)
+        self.c4_att = CoordAtt(512, 512)
         self.d4 = DownSample()
         self.c5 = ConvBlock(512, 1024)
         self.u1 = UpSample(1024)
@@ -156,10 +159,9 @@ class UnetCooAtt(nn.Module):
 
 
 if __name__ == '__main__':
-    temp = torch.randn(100,64,64)
-    c,h,w = temp.size()
-    k = int(abs(math.log2(c)))
-    print(k)
-    conv = nn.Conv1d(100,100,kernel_size=k,stride=1,padding=(k - 1) // 2)
-    x = conv(temp)
+    x= torch.rand(64,64,1)#type:torch.Tensor
+
+    x.permute(2,1,0)
+    print(x.size())
+    #conv = nn.Conv1d(in_channels=64,out_channels=64,)
     print(x.size())
