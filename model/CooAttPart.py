@@ -1,3 +1,5 @@
+import math
+
 from torch import nn
 import torch
 from model.unet_model import DownSample,DoubleConv,UpSample,ConvBlock
@@ -71,13 +73,13 @@ class CoorAtten_v(nn.Module):
         self.pool_w_max = nn.AdaptiveMaxPool2d((1, None))
         mip = max(8, in_channel // reduction)
 
-        self.conv1 = nn.Conv2d(in_channel, mip, kernel_size=1, stride=1, padding=0)
+        self.aft_pool_conv1 = nn.Conv2d(in_channel, mip, kernel_size=1, stride=1, padding=0)
         self.bn1 = nn.BatchNorm2d(mip)
 
         self.act = h_swish()
 
-        self.conv_h = nn.Conv2d(mip, out_channel, kernel_size=1, stride=1, padding=0)
-        self.conv_w = nn.Conv2d(mip, out_channel, kernel_size=1, stride=1, padding=0)
+        self.aft_split_conv_h = nn.Conv2d(mip, out_channel, kernel_size=1, stride=1, padding=0)
+        self.aft_split_conv_w = nn.Conv2d(mip, out_channel, kernel_size=1, stride=1, padding=0)
 
     def forward(self, x):
         identity = x
@@ -89,16 +91,16 @@ class CoorAtten_v(nn.Module):
         x_w_max = self.pool_w_max(x).permute(0,1,3,2)
         y_max = torch.cat([x_h_max,x_w_max],dim=2)
 
-        y = torch.cat([x_h, x_w], dim=2)
-        y = self.conv1(y)  # 削减通道数为mip=c/r ,r = 32
+        y = torch.cat([x_h, x_w], dim=2)    #y = c*1*(h+w)
+        y = self.aft_pool_conv1(y)  # 削减通道数为mip=c/r ,r = 32
         y = self.bn1(y)
         y = self.act(y)
 
         x_h, x_w = torch.split(y, [h, w], dim=2)
         x_w = x_w.permute(0, 1, 3, 2)
 
-        a_h = self.conv_h(x_h).sigmoid()  #升维
-        a_w = self.conv_w(x_w).sigmoid()
+        a_h = self.aft_split_conv_h(x_h).sigmoid()  #升维
+        a_w = self.aft_split_conv_w(x_w).sigmoid()
 
         out = identity * a_w * a_h
 
@@ -154,6 +156,10 @@ class UnetCooAtt(nn.Module):
 
 
 if __name__ == '__main__':
-    temp = torch.randn(2,1,256,256)
-    net = UnetCooAtt(1,1)
-    print(net(temp).size())
+    temp = torch.randn(100,64,64)
+    c,h,w = temp.size()
+    k = int(abs(math.log2(c)))
+    print(k)
+    conv = nn.Conv1d(100,100,kernel_size=k,stride=1,padding=(k - 1) // 2)
+    x = conv(temp)
+    print(x.size())

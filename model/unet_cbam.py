@@ -35,19 +35,21 @@ class UnetCBAM(nn.Module):
 
     def forward(self, x):
         code_lay1 = self.c1(x)
-       # code_lay1_att = self.c1_att(code_lay1)
-        code_lay2 = self.c2(self.d1(code_lay1))
-       # code_lay2_att = self.c2_att(code_lay2)
-        code_lay3 = self.c3(self.d2(code_lay2))
-       # code_lay3_att = self.c3_att(code_lay3)
-        code_lay4 = self.c4(self.d3(code_lay3))
+        code_lay1_att = self.c1_att(code_lay1)
+        #code_lay1_att = x + code_lay1_att
+        code_lay2 = self.c2(self.d1(code_lay1_att))
+        code_lay2_att = self.c2_att(code_lay2)
+
+        code_lay3 = self.c3(self.d2(code_lay2_att))
+        code_lay3_att = self.c3_att(code_lay3)
+        code_lay4 = self.c4(self.d3(code_lay3_att))
         code_lay4_att = self.c4_att(code_lay4)
         #编码的最底层，也是解码的第一层
         code_lay5 = self.c5(self.d4(code_lay4))
         deCode_lay1 = self.c6(self.u1(code_lay5, code_lay4_att))
-        deCode_lay2 = self.c7(self.u2(deCode_lay1, code_lay3))
-        deCode_lay3 = self.c8(self.u3(deCode_lay2, code_lay2))
-        deCode_lay4 = self.c9(self.u4(deCode_lay3, code_lay1))
+        deCode_lay2 = self.c7(self.u2(deCode_lay1, code_lay3_att))
+        deCode_lay3 = self.c8(self.u3(deCode_lay2, code_lay2_att))
+        deCode_lay4 = self.c9(self.u4(deCode_lay3, code_lay1_att))
         out = self.out(deCode_lay4)
         out = nn.Sigmoid()(out)
         return out

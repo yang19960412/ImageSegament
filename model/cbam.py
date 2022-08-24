@@ -63,10 +63,10 @@ class CBAMBlock(nn.Module):
 
     def forward(self, x):
         b, c, _, _ = x.size()
-        residual = x
+
         out = x * self.ca(x)
         out = out * self.sa(out)
-        return out + residual
+        return out
 
 
 if __name__ == '__main__':

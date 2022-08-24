@@ -22,9 +22,10 @@ class SoftDiceLoss(nn.Module):
 class BCEDiceLoss(nn.Module):
     def __init__(self):
         super(BCEDiceLoss, self).__init__()
+        self.bce_Loss = nn.BCELoss()
     def forward(self,logits,targets):
         #probs = F.sigmoid(logits)
-        BCELoss = nn.BCELoss.cuda(logits,targets)
+        BCELoss = self.bce_Loss(logits, targets).cuda()
         num = targets.size(0)
         smooth = 1
 

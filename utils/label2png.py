@@ -1,13 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
--------------------------------------------------
-Project Name: unet
-File Name: label2png.py
-Author: chenming
-Create Date: 2022/2/6
-Description：
--------------------------------------------------
-"""
+
 import os.path as osp
 import shutil
 import os

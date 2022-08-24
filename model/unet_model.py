@@ -179,10 +179,10 @@ class ECA_Attention(nn.Module):
         self.channel_att = ChannelAttention(in_channel)
 
     def forward(self, x):
-        out = x
-        residual = out
-        out = self.channel_att(out) * out
-        out += residual
+        #out = x
+        #residual = out
+        out = self.channel_att(x) * x
+        #out += residual
         return out
 
 

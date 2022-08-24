@@ -31,7 +31,6 @@ def train_net(net, device, start_epoch, model_name, weight_path, data_path, crit
 
     # 定义RMSprop算法
     optimizer = optim.RMSprop(net.parameters(), lr=lr, weight_decay=1e-8, momentum=0.9)
-    # 定义Loss算法
     # 训练epochs次
     train_iteration = len(train_loader)
     val_iteration = len(val_loader)
@@ -45,13 +44,13 @@ def train_net(net, device, start_epoch, model_name, weight_path, data_path, crit
         net.load_state_dict(model_dict)
 
     for epoch in range(start_epoch, epochs):
-        train_loss = train_one_epoch(net, model_name, optimizer, epoch, epochs, train_loader, train_iteration)
-        val_loss = val_one_epoch(net, model_name, optimizer, epoch, epochs, val_loader, val_iteration)
+        train_loss = train_one_epoch(net, model_name,criterion, optimizer, epoch, epochs, train_loader, train_iteration)
+        val_loss = val_one_epoch(net, model_name,criterion, optimizer, epoch, epochs, val_loader, val_iteration)
         print(f'Total Loss: {train_loss:.3f} || Val Loss: {val_loss:.3f} ')
         loss_history.append_loss(train_loss, val_loss)
 
 
-def train_one_epoch(net, model_name, optimizer, curEpoch, endEpoch, train_loader, iteration):
+def train_one_epoch(net, model_name, criterion,optimizer, curEpoch, endEpoch, train_loader, iteration):
     print('start train:')
     with tqdm(total=iteration, desc=f'Epoch {curEpoch + 1}/{endEpoch}', postfix=dict, mininterval=0.3) as pbar:
         total_loss = 0
@@ -90,7 +89,7 @@ def train_one_epoch(net, model_name, optimizer, curEpoch, endEpoch, train_loader
     return total_loss.item() / (iteration)
 
 
-def val_one_epoch(net, model_name, optimizer, curEpoch, endEpoch, train_loader, iteration):
+def val_one_epoch(net, model_name,criterion, optimizer, curEpoch, endEpoch, train_loader, iteration):
     print('start val:')
     with tqdm(total=iteration, desc=f'Epoch {curEpoch + 1}/{endEpoch}', postfix=dict, mininterval=0.3) as pbar:
         total_loss = 0
@@ -138,7 +137,6 @@ def getArgs():
     parse.add_argument("--action", type=str, help="train/test/train&test", default="train&test")
     parse.add_argument('--model', '-a', metavar='MODEL', default='UnetCooAtt', type=str,
                        help='Choose the model')
-    parse.add_argument('--device', type=str, default='cuda', help='choose device')
     parse.add_argument('--weight_path', type=str, default='logs/Unet_CBAM_37.pth', help='load pre_train weight_path')
     parse.add_argument('--load_pretrain_model', type=bool, default=False, help='decide the model whether load weight')
     parse.add_argument("--batch_size", type=int, default=1)
@@ -146,11 +144,18 @@ def getArgs():
     parse.add_argument("--log_dir", default='logs', help="log dir")
     parse.add_argument("--threshold", type=float, default=None)
     parse.add_argument('--start_epoch', type=int, default=0, help='train start epoch')
-    parse.add_argument('--end_epoch', type=int, default=50, help='the train epochs = startEpoch - endEpoch')
+    parse.add_argument('--end_epoch', type=int, default=50, help='the train epochs = endEpoch - startEpoch')
     parse.add_argument('--lr', type=float, default=0.00001, help='the learning rate')
-    parse.add_argument('--loss_function', type=str, default='Dice', help='choose the loss function')
+    parse.add_argument('--loss_function', type=str, default='BCEDice', help='choose the loss function')
     args = parse.parse_args()
     return args
+
+
+def check_dir_and_create(dir_name):
+    if not os.path.exists(dir_name):
+        os.makedirs(dir_name)
+        return False
+    return True
 
 
 if __name__ == "__main__":
@@ -168,8 +173,7 @@ if __name__ == "__main__":
     weight_path = arg.weight_path
     load_weight = arg.load_pretrain_model
     end_epochs = arg.end_epoch
-    if not os.path.exists(log_model_dir):
-        os.makedirs(log_model_dir)
+    check_dir_and_create(log_model_dir)
     if loss == 'BCE':
         criterion = nn.BCELoss().cuda()
     elif loss == 'BCEDice':
