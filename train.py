@@ -30,7 +30,8 @@ def train_net(net, device, start_epoch, model_name, weight_path, data_path, crit
                                              shuffle=True)
 
     # 定义RMSprop算法
-    optimizer = optim.RMSprop(net.parameters(), lr=lr, weight_decay=1e-8, momentum=0.9)
+    #optimizer = optim.RMSprop(net.parameters(), lr=lr, weight_decay=1e-8, momentum=0.9)
+    optimizer = optim.Adam(net.parameters(),lr=lr,betas=(0.9,0.99))
     # 训练epochs次
     train_iteration = len(train_loader)
     val_iteration = len(val_loader)
