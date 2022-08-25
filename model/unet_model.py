@@ -88,7 +88,7 @@ class Unet_att_ECA(nn.Module):
         deCode_lay3 = self.c8(self.u3(deCode_lay2, code_lay2_att))
         deCode_lay4 = self.c9(self.u4(deCode_lay3, code_lay1_att))
         out = self.out(deCode_lay4)
-        out = nn.Sigmoid()(out)
+        # out = nn.Sigmoid()(out)
         return out
 
     def getName(self):
@@ -113,6 +113,8 @@ class ConvBlock(nn.Module):
         return self.layer(x)
 
 
+
+
 class DownSample(nn.Module):
     def __init__(self):
         super(DownSample, self).__init__()
@@ -123,13 +125,13 @@ class DownSample(nn.Module):
 
 
 class UpSample(nn.Module):
-    def __init__(self, channel):
+    def __init__(self, in_channel):
         super(UpSample, self).__init__()
-        self.layer = nn.Conv2d(channel, channel // 2, 1, 1)
+        self.layer = nn.Conv2d(in_channel, in_channel // 2, 1, 1)
 
     def forward(self, x, feature_map):
-        up = F.interpolate(x, scale_factor=2, mode='nearest')
-        out = self.layer(up)
+        up = F.interpolate(x, scale_factor=2, mode='bilinear')  # h*w变为2倍，通道数不变
+        out = self.layer(up)  # 先上采样再卷积降通道
         return torch.cat((feature_map, out), dim=1)
 
 
@@ -180,10 +182,10 @@ class ECA_Attention(nn.Module):
         self.channel_att = ChannelAttention(in_channel)
 
     def forward(self, x):
-        #out = x
-        #residual = out
+        # out = x
+        # residual = out
         out = self.channel_att(x) * x
-        #out += residual
+        # out += residual
         return out
 
 
@@ -287,7 +289,6 @@ class Unet_CBAM(nn.Module):
 
 
 if __name__ == '__main__':
-    x = torch.rand(2,1,256,256)
-    net = UNet(n_channels=1, n_classes=1)
-
-    print(net(x).size())
+    x = torch.rand(1, 1, 4, 4)
+    t = UpSample(1).forward(x)
+    print(t.size())

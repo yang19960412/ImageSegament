@@ -15,7 +15,7 @@ from utils.DiceLoss import SoftDiceLoss, BCEDiceLoss
 from model.CooAttPart import UnetCooAtt
 
 
-def train_net(net, device, start_epoch, model_name, weight_path, data_path, criterion, loss_history, epochs=40,
+def train_net(net, device, loss_name,start_epoch, model_name, weight_path, data_path, criterion, loss_history, epochs=40,
               batch_size=2,
               lr=0.00001,
               dice_flag=True):
@@ -45,13 +45,13 @@ def train_net(net, device, start_epoch, model_name, weight_path, data_path, crit
         net.load_state_dict(model_dict)
 
     for epoch in range(start_epoch, epochs):
-        train_loss = train_one_epoch(net, model_name,criterion, optimizer, epoch, epochs, train_loader, train_iteration)
-        val_loss = val_one_epoch(net, model_name,criterion, optimizer, epoch, epochs, val_loader, val_iteration)
+        train_loss = train_one_epoch(net, loss_name,model_name,criterion, optimizer, epoch, epochs, train_loader, train_iteration)
+        val_loss = val_one_epoch(net,criterion, optimizer, epoch, epochs, val_loader, val_iteration)
         print(f'Total Loss: {train_loss:.3f} || Val Loss: {val_loss:.3f} ')
         loss_history.append_loss(train_loss, val_loss)
 
 
-def train_one_epoch(net, model_name, criterion,optimizer, curEpoch, endEpoch, train_loader, iteration):
+def train_one_epoch(net, loss_name,model_name, criterion,optimizer, curEpoch, endEpoch, train_loader, iteration):
     print('start train:')
     with tqdm(total=iteration, desc=f'Epoch {curEpoch + 1}/{endEpoch}', postfix=dict, mininterval=0.3) as pbar:
         total_loss = 0
@@ -80,7 +80,7 @@ def train_one_epoch(net, model_name, criterion,optimizer, curEpoch, endEpoch, tr
             print(
                 f'current_epoch:{curEpoch + 1}/Epochs{endEpoch}=========>loss:{loss.item():.3f},f_score:{_f_score:.3f},dice_coe:{dice_coe:.3f}')
 
-            torch.save(net.state_dict(), f'logs/{model_name}/{model_name}_{curEpoch}_{endEpoch}.pth')
+            torch.save(net.state_dict(), f'logs/{model_name}/{model_name}_{loss_name}_{curEpoch}_{endEpoch}.pth')
             # 更新参数
             loss.backward()
             optimizer.step()
@@ -90,7 +90,7 @@ def train_one_epoch(net, model_name, criterion,optimizer, curEpoch, endEpoch, tr
     return total_loss.item() / (iteration)
 
 
-def val_one_epoch(net, model_name,criterion, optimizer, curEpoch, endEpoch, train_loader, iteration):
+def val_one_epoch(net, criterion, optimizer, curEpoch, endEpoch, train_loader, iteration):
     print('start val:')
     with tqdm(total=iteration, desc=f'Epoch {curEpoch + 1}/{endEpoch}', postfix=dict, mininterval=0.3) as pbar:
         total_loss = 0
@@ -193,5 +193,5 @@ if __name__ == "__main__":
     if not load_weight:
         weight_path = ''
     loss_history = LossHistory(log_model_dir)
-    train_net(net, device, start_epoch, model_name, weight_path, data_path, criterion, loss_history, epochs=end_epochs,
+    train_net(net, device, loss,start_epoch, model_name, weight_path, data_path, criterion, loss_history, epochs=end_epochs,
               batch_size=batch_size)

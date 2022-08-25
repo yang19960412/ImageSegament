@@ -38,45 +38,6 @@ class SoftDiceLoss(nn.Module):
         return score
 
 
-def Focal_Loss(inputs, target, cls_weights, num_classes=2, alpha=0.5, gamma=2):
-    n, c, h, w = inputs.size()
-    nt, ht, wt = target.size()
-    if h != ht and w != wt:
-        inputs = F.interpolate(inputs, size=(ht, wt), mode="bilinear", align_corners=True)
-
-    temp_inputs = inputs.transpose(1, 2).transpose(2, 3).contiguous().view(-1, c)
-    temp_target = target.view(-1)
-
-    logpt = -nn.CrossEntropyLoss(weight=cls_weights, ignore_index=num_classes, reduction='none')(temp_inputs,
-                                                                                                 temp_target)
-    pt = torch.exp(logpt)
-    if alpha is not None:
-        logpt *= alpha
-    loss = -((1 - pt) ** gamma) * logpt
-    loss = loss.mean()
-    return loss
-
-
-def Dice_loss(inputs, target, beta=1, smooth=1e-5):
-    n, c, h, w = inputs.size()
-    n_t, c_t, h_t, w_t = target.size()
-    if h != h_t and w != w_t:
-        inputs = F.interpolate(inputs, size=(h_t, w_t), mode="bilinear", align_corners=True)
-
-    temp_inputs = torch.softmax(inputs.transpose(1, 2).transpose(2, 3).contiguous().view(n, -1, c), -1)
-    temp_target = target.view(n, -1, c_t)
-
-    # --------------------------------------------#
-    #   计算dice loss
-    # --------------------------------------------#
-    tp = torch.sum(temp_target[..., :-1] * temp_inputs, axis=[0, 1])
-    fp = torch.sum(temp_inputs, axis=[0, 1]) - tp
-    fn = torch.sum(temp_target[..., :-1], axis=[0, 1]) - tp
-
-    score = ((1 + beta ** 2) * tp + smooth) / ((1 + beta ** 2) * tp + beta ** 2 * fn + fp + smooth)
-    dice_loss = 1 - torch.mean(score)
-    return dice_loss
-
 
 def dice_coeff(pred, target):
     smooth = 1.
@@ -342,12 +303,12 @@ if __name__ == '__main__':
                          [1,1,0]]]])#type:torch.Tensor
     t2 = torch.Tensor([[[[1, 1, 1],
                          [1, 1, 0]]]])
+    score = Dice_loss(t1, t2)
     t1 = t1.flatten()
     t2 = t2.flatten()
     a = t1.cpu().numpy()#type:np.ndarray
     b = t2.cpu().numpy()#type:np.ndarray
     a = a.astype(int)
     b = b.astype(int)
-    hist = getF1_ScoreByNumpy(a,b)
-    print(hist)
-    typeName = ['background','infection']
+
+    print(score)

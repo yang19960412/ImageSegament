@@ -1,3 +1,4 @@
+import torch
 from torch import  nn
 from model.unet_model import ConvBlock
 from model.cbam import CBAMBlock
@@ -51,7 +52,12 @@ class UnetCBAM(nn.Module):
         deCode_lay3 = self.c8(self.u3(deCode_lay2, code_lay2_att))
         deCode_lay4 = self.c9(self.u4(deCode_lay3, code_lay1_att))
         out = self.out(deCode_lay4)
-        out = nn.Sigmoid()(out)
+       # out = nn.Sigmoid()(out)
         return out
     def getName(self):
         return str(UnetCBAM);
+
+if __name__ == '__main__':
+    x = torch.rand(1,1,256,256)
+    net = UnetCBAM(n_channels=1,n_classes=1)
+    print(net(x).size())
