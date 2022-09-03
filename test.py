@@ -1,32 +1,25 @@
-# -*- coding: utf-8 -*-
-"""
--------------------------------------------------
-Project Name: unet
-File Name: test.py
-Author: yang
-Create Date: 2022/2/7
-Description：
--------------------------------------------------
-"""
 import os
 
 import numpy
 from tqdm import tqdm
 from utils.utils_metrics import compute_mIoU, show_results
-from utils.utils_metrics import Dice_loss,Focal_Loss,f1_lossFromTensor
+from utils.utils_metrics import f1_lossFromTensor
 from utils.DiceLoss import SoftDiceLoss
+from model.ResUnet import ResUnet
 import glob
 from utils.plot import plot_confusion_matrix
 import numpy as np
 import torch
 import os
 import cv2
-from model.unet_model import UNet,Unet_att_ECA,Unet_CBAM
+from model.unet_model import UNet, Unet_att_ECA, Unet_CBAM
 from model.unet_cbam import UnetCBAM
+from model.UnetSPAtt import UnetSpAtt
 from PIL import Image
-from train import  getArgs
+from train import getArgs, get_model
 
-def cal_miou(net,model_path,test_dir="COVID/test",
+
+def cal_miou(net, model_path, test_dir="COVID/test",
              pred_dir='result_att/0-1mask', gt_dir="COVID/test_gt/0-1mask",
              miou_out_path="result_att/miou"
              ):
@@ -53,10 +46,10 @@ def cal_miou(net,model_path,test_dir="COVID/test",
     # 计算结果和gt的结果进行比对
     result_dir = os.path.split(pred_dir)[0]
 
-    GT_dir = os.path.join(result_dir,'0-255mask')
-    GT_contrast  = os.path.join(result_dir,'0-255contrast')
+    GT_dir = os.path.join(result_dir, '0-255mask')
+    GT_contrast = os.path.join(result_dir, '0-255contrast')
     label_path = os.path.split(test_dir)[0]
-    label_path = os.path.join(label_path,'test_gt','0-255mask')
+    label_path = os.path.join(label_path, 'test_gt', '0-255mask')
 
     if not os.path.exists(GT_dir):
         os.makedirs(GT_dir)
@@ -123,49 +116,54 @@ def cal_miou(net,model_path,test_dir="COVID/test",
 
     if miou_mode == 0 or miou_mode == 2:
         print("Get miou.")
-        hist, IoUs, PA_Recall, Precision,f_score,plot_hist = compute_mIoU(gt_dir, pred_dir, image_ids, num_classes,
-                                                        name_classes)  # 执行计算mIoU的函数
+        hist, IoUs, PA_Recall, Precision, f_score, plot_hist = compute_mIoU(gt_dir, pred_dir, image_ids, num_classes,
+                                                                            name_classes)  # 执行计算mIoU的函数
         print("Get miou done.")
         confusion_matrix = get_confusion_matrix(hist)
-        class_name = ['infection','background']
-        martix_path = os.path.join(miou_out_path,'martix.png')
-        plot_confusion_matrix(confusion_matrix,class_name,martix_path)
+        class_name = ['infection', 'background']
+        martix_path = os.path.join(miou_out_path, 'martix.png')
+        plot_confusion_matrix(confusion_matrix, class_name, martix_path)
 
-        show_results(miou_out_path, hist, IoUs, PA_Recall, Precision,f_score, name_classes)
-        getGT(pred_dir,GT_dir)
-        get_gt_contrast(pred_dir,GT_contrast,label_dir=label_path)
+        show_results(miou_out_path, hist, IoUs, PA_Recall, Precision, f_score, name_classes)
+        getGT(pred_dir, GT_dir)
+        get_gt_contrast(pred_dir, GT_contrast, label_dir=label_path)
 
-def get_confusion_matrix(hist:np.ndarray):
+
+def get_confusion_matrix(hist: np.ndarray):
     hist = hist[[1, 0], :]
     hist = hist[:, [1, 0]]
     return hist
 
-def getGT(pre_dir,GT_dir):
-    for name  in os.listdir(pre_dir):
-        if name.endswith('.png'):
-            img_name = os.path.join(pre_dir,name)
-            img = Image.open(img_name)
-            arr = numpy.array(img)
-            arr[arr==1] = 255
-            img = Image.fromarray(arr)
-            img.save(os.path.join(GT_dir,name))
-def get_gt_contrast(pre_dir,GT_dir,label_dir):
+
+def getGT(pre_dir, GT_dir):
     for name in os.listdir(pre_dir):
         if name.endswith('.png'):
             img_name = os.path.join(pre_dir, name)
             img = Image.open(img_name)
             arr = numpy.array(img)
             arr[arr == 1] = 255
-            lable_name = os.path.join(label_dir,name)
+            img = Image.fromarray(arr)
+            img.save(os.path.join(GT_dir, name))
+
+
+def get_gt_contrast(pre_dir, GT_dir, label_dir):
+    for name in os.listdir(pre_dir):
+        if name.endswith('.png'):
+            img_name = os.path.join(pre_dir, name)
+            img = Image.open(img_name)
+            arr = numpy.array(img)
+            arr[arr == 1] = 255
+            lable_name = os.path.join(label_dir, name)
             label = Image.open(lable_name)
             label = np.array(label)
-            mask = np.column_stack((arr,label))
+            mask = np.column_stack((arr, label))
             img = Image.fromarray(mask)
             img.save(os.path.join(GT_dir, name))
-if __name__ == '__main__':
-    net = UNet(n_channels=1, n_classes=1)
-    arg = getArgs()
-    pred_dir = os.path.join(f'result_{arg.model}_{arg.end_epoch}','0-1mask')
-    miou_path = os.path.join(f'result_{arg.model}_{arg.end_epoch}','miou')
-    cal_miou(net = net,model_path='logs/Unet_50/Unet_model_49.pth',pred_dir=pred_dir,miou_out_path=miou_path)
 
+
+if __name__ == '__main__':
+    arg = getArgs()
+    net = get_model(arg)
+    pred_dir = os.path.join(f'result_{arg.model}_{arg.end_epoch}_{arg.loss_function}', '0-1mask')
+    miou_path = os.path.join(f'result_{arg.model}_{arg.end_epoch}_{arg.loss_function}', 'miou')
+    cal_miou(net=net, model_path='logs/Unet_50/Unet_model_49.pth', pred_dir=pred_dir, miou_out_path=miou_path)
